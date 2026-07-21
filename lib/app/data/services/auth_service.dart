@@ -1,12 +1,16 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
 
 class AuthService extends GetxService {
   final GetStorage _storage = GetStorage();
 
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
+
   final Rxn<UserModel> currentUser = Rxn<UserModel>();
-  final RxList<UserModel> registeredUsers = <UserModel>[].obs;
 
   bool get isLoggedIn => currentUser.value != null;
   bool get isGuest => currentUser.value?.isGuest ?? true;
@@ -14,17 +18,9 @@ class AuthService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    _loadUsers();
+    // Clean up stale legacy local cache of users
+    _storage.remove('users');
     _loadCurrentSession();
-  }
-
-  void _loadUsers() {
-    final List<dynamic>? stored = _storage.read<List<dynamic>>('users');
-    if (stored != null) {
-      registeredUsers.assignAll(
-        stored.map((e) => UserModel.fromJson(Map<String, dynamic>.from(e))).toList(),
-      );
-    }
   }
 
   void _loadCurrentSession() {
@@ -40,47 +36,68 @@ class AuthService extends GetxService {
     required String password,
     String phone = '',
   }) async {
-    final lowerUsername = username.trim().toLowerCase();
-    final lowerEmail = email.trim().toLowerCase();
+    try {
+      final payload = {
+        'name': username.trim(),
+        'email': email.trim(),
+        'password': password,
+        'phone': phone.trim(),
+      };
 
-    final exists = registeredUsers.any(
-      (u) => u.username.toLowerCase() == lowerUsername || u.email.toLowerCase() == lowerEmail,
-    );
+      final response = await http.post(
+        Uri.parse('$baseUrl/register'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 6));
 
-    if (exists) {
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        debugPrint('[AuthService] User registered successfully into Supabase DB: ${email.trim()}');
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        debugPrint('[AuthService] Registration rejected by server: ${data['message']}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Registration error: $e');
       return false;
     }
-
-    final newUser = UserModel(
-      id: 'USR-${DateTime.now().millisecondsSinceEpoch}',
-      username: username.trim(),
-      email: email.trim(),
-      password: password,
-      phone: phone.trim(),
-    );
-
-    registeredUsers.add(newUser);
-    await _storage.write('users', registeredUsers.map((u) => u.toJson()).toList());
-    return true;
   }
 
-  bool login({
-    required String identifier, // Username or Email
+  Future<bool> login({
+    required String identifier,
     required String password,
-  }) {
+  }) async {
     final cleanIdentifier = identifier.trim().toLowerCase();
-    final match = registeredUsers.firstWhereOrNull(
-      (u) =>
-          (u.username.toLowerCase() == cleanIdentifier ||
-              u.email.toLowerCase() == cleanIdentifier) &&
-          u.password == password,
-    );
 
-    if (match != null) {
-      currentUser.value = match;
-      _storage.write('current_user', match.toJson());
-      return true;
+    // Validate against Laravel Server API -> Supabase Database (Strict Hashed Password Match)
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode({'identifier': cleanIdentifier, 'password': password}),
+      ).timeout(const Duration(seconds: 6));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userData = data['data'];
+
+        final loggedInUser = UserModel(
+          id: userData['id'].toString(),
+          username: userData['username'].toString(),
+          email: userData['email'].toString(),
+          phone: userData['phone']?.toString() ?? '',
+          password: password,
+        );
+
+        currentUser.value = loggedInUser;
+        await _storage.write('current_user', loggedInUser.toJson());
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Server login error: $e');
     }
+
     return false;
   }
 
@@ -93,39 +110,49 @@ class AuthService extends GetxService {
     final current = currentUser.value;
     if (current == null || current.isGuest) return false;
 
-    final lowerUsername = username.trim().toLowerCase();
-    final lowerEmail = email.trim().toLowerCase();
+    try {
+      final payload = {
+        'username': username.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        if (newPassword != null && newPassword.isNotEmpty) 'password': newPassword,
+      };
 
-    // Check collision with OTHER registered users
-    final collision = registeredUsers.any(
-      (u) =>
-          u.id != current.id &&
-          (u.username.toLowerCase() == lowerUsername || u.email.toLowerCase() == lowerEmail),
-    );
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/${current.id}/profile'),
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 6));
 
-    if (collision) {
-      return false;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userData = data['data'];
+
+        final updatedUser = current.copyWith(
+          username: userData['username'].toString(),
+          email: userData['email'].toString(),
+          phone: userData['phone']?.toString() ?? '',
+          password: (newPassword != null && newPassword.isNotEmpty) ? newPassword : current.password,
+        );
+
+        currentUser.value = updatedUser;
+        await _storage.write('current_user', updatedUser.toJson());
+        debugPrint('[AuthService] Profile updated & synced to Supabase DB for user ${current.id}');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Server profile update error: $e');
     }
 
     final updatedUser = current.copyWith(
       username: username.trim(),
       email: email.trim(),
       phone: phone.trim(),
-      password: (newPassword != null && newPassword.isNotEmpty)
-          ? newPassword
-          : current.password,
+      password: (newPassword != null && newPassword.isNotEmpty) ? newPassword : current.password,
     );
-
-    // Replace in registeredUsers list
-    final index = registeredUsers.indexWhere((u) => u.id == current.id);
-    if (index != -1) {
-      registeredUsers[index] = updatedUser;
-    }
 
     currentUser.value = updatedUser;
     await _storage.write('current_user', updatedUser.toJson());
-    await _storage.write('users', registeredUsers.map((u) => u.toJson()).toList());
-
     return true;
   }
 

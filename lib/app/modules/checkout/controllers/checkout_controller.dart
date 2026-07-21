@@ -21,6 +21,9 @@ class CheckoutController extends GetxController {
   final RxBool isFetchingLocation = false.obs;
   final RxString locationStatus = 'GPS belum diambil'.obs;
 
+  final RxString selectedShipping = 'express'.obs;
+  final RxString selectedPayment = 'cod'.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -118,8 +121,10 @@ class CheckoutController extends GetxController {
 
     final List<OrderCartItem> cartItems = [];
     catalogController.cart.forEach((itemId, qty) {
-      final item = orderService.sampleProducts.firstWhere((p) => p.id == itemId);
-      cartItems.add(OrderCartItem(item: item, quantity: qty));
+      final item = orderService.products.firstWhereOrNull((p) => p.id == itemId);
+      if (item != null) {
+        cartItems.add(OrderCartItem(item: item, quantity: qty));
+      }
     });
 
     final newOrder = OrderModel(

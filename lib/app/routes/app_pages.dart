@@ -1,7 +1,5 @@
 import 'package:get/get.dart';
 
-import '../modules/admin/bindings/admin_binding.dart';
-import '../modules/admin/views/admin_view.dart';
 import '../modules/auth/bindings/auth_binding.dart';
 import '../modules/auth/views/login_view.dart';
 import '../modules/auth/views/register_view.dart';
@@ -39,11 +37,6 @@ class AppPages {
       name: _Paths.CHECKOUT,
       page: () => const CheckoutView(),
       binding: CheckoutBinding(),
-    ),
-    GetPage(
-      name: _Paths.ADMIN,
-      page: () => const AdminView(),
-      binding: AdminBinding(),
     ),
     GetPage(
       name: _Paths.PROFILE,

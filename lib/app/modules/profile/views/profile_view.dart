@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../data/services/order_service.dart';
 import '../../../routes/app_pages.dart';
 import '../controllers/profile_controller.dart';
+import 'widgets/receipt_card.dart';
 
 class ProfileView extends GetView<ProfileController> {
   const ProfileView({super.key});
@@ -14,7 +16,7 @@ class ProfileView extends GetView<ProfileController> {
         backgroundColor: const Color(0xFF8B4513),
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Pengaturan Profil'),
+        title: const Text('Pengaturan Profil & Struk'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -254,6 +256,82 @@ class ProfileView extends GetView<ProfileController> {
                         onPressed: isGuest ? null : () => controller.saveProfile(),
                       ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Riwayat & Struk Belanja Header
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          'Riwayat & Struk Belanja',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF8B4513),
+                          ),
+                        ),
+                        Icon(Icons.receipt_long, color: Color(0xFF8B4513)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Builder(builder: (context) {
+                      final orderService = Get.find<OrderService>();
+                      return Obx(() {
+                        final orders = orderService.orders;
+                        if (orders.isEmpty) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBF9F5),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFE5E0D8)),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey[400]),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Belum ada transaksi pembelian.',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Lakukan pesanan di katalog untuk melihat struk digital.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: orders.map((order) => ReceiptCard(order: order)).toList(),
+                        );
+                      });
+                    }),
                   ],
                 ),
               ),

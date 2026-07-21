@@ -8,137 +8,191 @@ class RegisterView extends GetView<RegisterController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F6F0),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF8B4513),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Daftar Akun Baru'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-        child: Column(
-          children: [
-            const Text(
-              'Buat Akun Pelanggan',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8B4513),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Lengkapi formulir di bawah ini untuk memulai transaksi',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.07),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFFFF8F0), Color(0xFFF5EBE0)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Bakery Branding & Logo
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B4513),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF8B4513).withValues(alpha: 0.35),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Username Field
-                  TextField(
-                    controller: controller.usernameController,
-                    decoration: _buildInputDecoration(
-                      label: 'Username *',
-                      hint: 'Contoh: johndoe',
-                      icon: Icons.person_outline,
-                    ),
+                  child: const Icon(
+                    Icons.bakery_dining,
+                    size: 55,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 16),
-
-                  // Email Field
-                  TextField(
-                    controller: controller.emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _buildInputDecoration(
-                      label: 'Email *',
-                      hint: 'Contoh: john@example.com',
-                      icon: Icons.email_outlined,
-                    ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Daftar Akun Baru',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF8B4513),
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Buat akun pelanggan untuk memesan roti & kue Crust & Crumb.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 32),
 
-                  // Password Field
-                  Obx(() => TextField(
-                        controller: controller.passwordController,
-                        obscureText: controller.isObscurePassword.value,
+                // Form Card Container
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.07),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Username Field
+                      TextField(
+                        controller: controller.usernameController,
                         decoration: _buildInputDecoration(
-                          label: 'Password *',
-                          hint: 'Masukkan password',
-                          icon: Icons.lock_outline,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              controller.isObscurePassword.value
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () => controller.isObscurePassword.toggle(),
-                          ),
-                        ),
-                      )),
-                  const SizedBox(height: 16),
-
-                  // Password Confirmation Field
-                  Obx(() => TextField(
-                        controller: controller.confirmPasswordController,
-                        obscureText: controller.isObscureConfirmPassword.value,
-                        decoration: _buildInputDecoration(
-                          label: 'Konfirmasi Password *',
-                          hint: 'Ketik ulang password',
-                          icon: Icons.lock_reset,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              controller.isObscureConfirmPassword.value
-                                  ? Icons.visibility_off_outlined
-                                  : Icons.visibility_outlined,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () => controller.isObscureConfirmPassword.toggle(),
-                          ),
-                        ),
-                      )),
-                  const SizedBox(height: 24),
-
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD2691E),
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          label: 'Username',
+                          hint: 'Masukkan username baru',
+                          icon: Icons.person_outline,
                         ),
                       ),
-                      onPressed: () => controller.register(),
+                      const SizedBox(height: 16),
+
+                      // Email Field
+                      TextField(
+                        controller: controller.emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: _buildInputDecoration(
+                          label: 'Alamat Email',
+                          hint: 'Masukkan alamat email',
+                          icon: Icons.email_outlined,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password Field
+                      Obx(() => TextField(
+                            controller: controller.passwordController,
+                            obscureText: controller.isObscurePassword.value,
+                            decoration: _buildInputDecoration(
+                              label: 'Password',
+                              hint: 'Masukkan password',
+                              icon: Icons.lock_outline,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  controller.isObscurePassword.value
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () => controller.isObscurePassword.toggle(),
+                              ),
+                            ),
+                          )),
+                      const SizedBox(height: 16),
+
+                      // Password Confirmation Field
+                      Obx(() => TextField(
+                            controller: controller.confirmPasswordController,
+                            obscureText: controller.isObscureConfirmPassword.value,
+                            decoration: _buildInputDecoration(
+                              label: 'Konfirmasi Password',
+                              hint: 'Ketik ulang password',
+                              icon: Icons.lock_reset,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  controller.isObscureConfirmPassword.value
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () => controller.isObscureConfirmPassword.toggle(),
+                              ),
+                            ),
+                          )),
+                      const SizedBox(height: 24),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8B4513),
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shadowColor: const Color(0xFF8B4513).withValues(alpha: 0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () => controller.register(),
+                          child: const Text(
+                            'Daftar Akun Sekarang',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Login Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Sudah punya akun? ',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                    ),
+                    GestureDetector(
+                      onTap: () => Get.back(),
                       child: const Text(
-                        'Daftar Sekarang',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        'Masuk (Login)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFFD2691E),
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

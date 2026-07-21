@@ -36,6 +36,18 @@ class CheckoutView extends GetView<CheckoutController> {
             _buildStepHeader('3', 'Koordinat GPS Smartphone'),
             const SizedBox(height: 10),
             _buildGpsCard(),
+            const SizedBox(height: 22),
+
+            // STEP 4: Shipping Option
+            _buildStepHeader('4', 'Opsi Pengiriman'),
+            const SizedBox(height: 10),
+            _buildShippingOptionsCard(),
+            const SizedBox(height: 22),
+
+            // STEP 5: Payment Option
+            _buildStepHeader('5', 'Metode Pembayaran'),
+            const SizedBox(height: 10),
+            _buildPaymentOptionsCard(),
             const SizedBox(height: 28),
 
             // Submit Button
@@ -116,76 +128,137 @@ class CheckoutView extends GetView<CheckoutController> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          ...catCtrl.cart.entries.map((entry) {
-            final item = orderService.sampleProducts.firstWhere((p) => p.id == entry.key);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      item.imageUrl,
-                      width: 45,
-                      height: 45,
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => Container(
+      child: Obx(() {
+        if (catCtrl.cart.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                'Keranjang Anda Kosong',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            ...catCtrl.cart.entries.map((entry) {
+              final item = orderService.products.firstWhereOrNull((p) => p.id == entry.key);
+              if (item == null) return const SizedBox.shrink();
+              final qty = entry.value;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        item.imageUrl,
                         width: 45,
                         height: 45,
-                        color: Colors.amber[100],
-                        child: const Icon(Icons.bakery_dining, color: Color(0xFF8B4513)),
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, stack) => Container(
+                          width: 45,
+                          height: 45,
+                          color: Colors.amber[100],
+                          child: const Icon(Icons.bakery_dining, color: Color(0xFF8B4513)),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        Text(
-                          'Jumlah: ${entry.value}x',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Rp ${_formatPrice(item.price)}',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Rp ${_formatPrice(item.price * entry.value)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF8B4513),
+                    // Quantity Stepper Widget (- 1 +)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFBF9F5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE5E0D8)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () => catCtrl.removeFromCart(item),
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.remove, size: 16, color: Color(0xFF8B4513)),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              '$qty',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Color(0xFF8B4513),
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => catCtrl.addToCart(item),
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.add, size: 16, color: Color(0xFF8B4513)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const Divider(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total Pembayaran:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-              Text(
-                'Rp ${_formatPrice(catCtrl.totalCartPrice)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF8B4513),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Rp ${_formatPrice(item.price * qty)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Color(0xFF8B4513),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              );
+            }),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total Pembayaran:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                Text(
+                  'Rp ${_formatPrice(catCtrl.totalCartPrice)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Color(0xFF8B4513),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -336,6 +409,161 @@ class CheckoutView extends GetView<CheckoutController> {
                 ),
               )),
         ],
+      ),
+    );
+  }
+
+  Widget _buildShippingOptionsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Obx(() => Column(
+            children: [
+              _buildOptionTile(
+                value: 'express',
+                groupValue: controller.selectedShipping.value,
+                title: 'Kurir Crust & Crumb Express',
+                subtitle: 'Pengiriman cepat hangat 30-45 mnt (Gratis)',
+                icon: Icons.two_wheeler,
+                onTap: () => controller.selectedShipping.value = 'express',
+              ),
+              const Divider(height: 12),
+              _buildOptionTile(
+                value: 'sameday',
+                groupValue: controller.selectedShipping.value,
+                title: 'Ojek Online Same Day',
+                subtitle: 'GoSend / GrabExpress (Rp 15.000)',
+                icon: Icons.local_shipping_outlined,
+                onTap: () => controller.selectedShipping.value = 'sameday',
+              ),
+              const Divider(height: 12),
+              _buildOptionTile(
+                value: 'pickup',
+                groupValue: controller.selectedShipping.value,
+                title: 'Ambil Sendiri di Outlet (Self Pick-up)',
+                subtitle: 'Ambil di toko cabang terdekat',
+                icon: Icons.storefront_outlined,
+                onTap: () => controller.selectedShipping.value = 'pickup',
+              ),
+            ],
+          )),
+    );
+  }
+
+  Widget _buildPaymentOptionsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Obx(() => Column(
+            children: [
+              _buildOptionTile(
+                value: 'cod',
+                groupValue: controller.selectedPayment.value,
+                title: 'Bayar di Tempat (COD)',
+                subtitle: 'Bayar tunai saat kurir tiba di rumah',
+                icon: Icons.payments_outlined,
+                onTap: () => controller.selectedPayment.value = 'cod',
+              ),
+              const Divider(height: 12),
+              _buildOptionTile(
+                value: 'qris',
+                groupValue: controller.selectedPayment.value,
+                title: 'Transfer Bank & QRIS Instant',
+                subtitle: 'BCA, Mandiri, BRI & QRIS',
+                icon: Icons.qr_code_scanner,
+                onTap: () => controller.selectedPayment.value = 'qris',
+              ),
+              const Divider(height: 12),
+              _buildOptionTile(
+                value: 'ewallet',
+                groupValue: controller.selectedPayment.value,
+                title: 'E-Wallet',
+                subtitle: 'GoPay, OVO, DANA, ShopeePay',
+                icon: Icons.account_balance_wallet_outlined,
+                onTap: () => controller.selectedPayment.value = 'ewallet',
+              ),
+            ],
+          )),
+    );
+  }
+
+  Widget _buildOptionTile({
+    required String value,
+    required String groupValue,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final isSelected = value == groupValue;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF8B4513).withValues(alpha: 0.1) : Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: isSelected ? const Color(0xFF8B4513) : Colors.grey[600],
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: isSelected ? const Color(0xFF8B4513) : const Color(0xFF333333),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+            Radio<String>(
+              value: value,
+              groupValue: groupValue,
+              activeColor: const Color(0xFF8B4513),
+              onChanged: (_) => onTap(),
+            ),
+          ],
+        ),
       ),
     );
   }

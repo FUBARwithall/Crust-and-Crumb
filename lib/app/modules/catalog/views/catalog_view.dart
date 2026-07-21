@@ -92,11 +92,6 @@ class CatalogView extends GetView<CatalogController> {
             onPressed: () => Get.toNamed(Routes.PROFILE),
           ),
           IconButton(
-            tooltip: 'Admin Dashboard',
-            icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white),
-            onPressed: () => Get.toNamed(Routes.ADMIN),
-          ),
-          IconButton(
             tooltip: 'Keluar / Ganti Akun',
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
@@ -110,10 +105,7 @@ class CatalogView extends GetView<CatalogController> {
         children: [
           // Hero Banner & Search Header
           Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFF4A2C11),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-            ),
+            color: const Color(0xFF4A2C11),
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             child: Column(
               children: [

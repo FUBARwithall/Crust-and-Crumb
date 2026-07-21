@@ -11,6 +11,7 @@ class LoginController extends GetxController {
   final passwordController = TextEditingController();
 
   final RxBool isObscurePassword = true.obs;
+  final RxBool isLoading = false.obs;
 
   @override
   void onClose() {
@@ -19,7 +20,7 @@ class LoginController extends GetxController {
     super.onClose();
   }
 
-  void login() {
+  Future<void> login() async {
     final identifier = identifierController.text.trim();
     final password = passwordController.text;
 
@@ -31,18 +32,23 @@ class LoginController extends GetxController {
       return;
     }
 
-    final success = authService.login(identifier: identifier, password: password);
-    if (success) {
-      Get.offAllNamed(Routes.CATALOG);
-      AppSnackbar.success(
-        'Login Berhasil',
-        'Selamat datang kembali, ${authService.currentUser.value?.username}!',
-      );
-    } else {
-      AppSnackbar.error(
-        'Login Gagal',
-        'Username / Email atau Password salah.',
-      );
+    isLoading.value = true;
+    try {
+      final success = await authService.login(identifier: identifier, password: password);
+      if (success) {
+        Get.offAllNamed(Routes.CATALOG);
+        AppSnackbar.success(
+          'Login Berhasil',
+          'Selamat datang kembali, ${authService.currentUser.value?.username}!',
+        );
+      } else {
+        AppSnackbar.error(
+          'Login Gagal',
+          'Username / Email atau Password salah. Silakan periksa kembali atau daftar akun baru.',
+        );
+      }
+    } finally {
+      isLoading.value = false;
     }
   }
 
