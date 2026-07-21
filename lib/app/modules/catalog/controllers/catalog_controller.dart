@@ -1,6 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/bakery_item.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../data/services/order_service.dart';
+import '../../../routes/app_pages.dart';
 
 class CatalogController extends GetxController {
   final OrderService orderService = Get.find<OrderService>();
@@ -47,6 +50,29 @@ class CatalogController extends GetxController {
   }
 
   void addToCart(BakeryItem item) {
+    final authService = Get.find<AuthService>();
+    if (authService.isGuest) {
+      Get.defaultDialog(
+        title: 'Perlu Akun Terdaftar',
+        titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B4513)),
+        middleText:
+            'Anda sedang menggunakan mode Tamu. Silakan Login atau Daftar Akun terlebih dahulu untuk menambahkan produk ke keranjang.',
+        textConfirm: 'Daftar Akun Baru',
+        textCancel: 'Login',
+        confirmTextColor: Colors.white,
+        buttonColor: const Color(0xFF8B4513),
+        cancelTextColor: const Color(0xFF8B4513),
+        onConfirm: () {
+          Get.back();
+          Get.toNamed(Routes.REGISTER);
+        },
+        onCancel: () {
+          Get.back();
+          Get.toNamed(Routes.LOGIN);
+        },
+      );
+      return;
+    }
     cart[item.id] = (cart[item.id] ?? 0) + 1;
   }
 

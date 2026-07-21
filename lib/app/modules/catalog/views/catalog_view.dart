@@ -335,7 +335,32 @@ class CatalogView extends GetView<CatalogController> {
                   'Checkout',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-                onPressed: () => Get.toNamed(Routes.CHECKOUT),
+                onPressed: () {
+                  final authService = Get.find<AuthService>();
+                  if (authService.isGuest) {
+                    Get.defaultDialog(
+                      title: 'Perlu Akun Terdaftar',
+                      titleStyle: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B4513)),
+                      middleText:
+                          'Anda sedang menggunakan mode Tamu. Silakan Login atau Daftar Akun terlebih dahulu untuk melakukan checkout.',
+                      textConfirm: 'Daftar Akun Baru',
+                      textCancel: 'Login',
+                      confirmTextColor: Colors.white,
+                      buttonColor: const Color(0xFF8B4513),
+                      cancelTextColor: const Color(0xFF8B4513),
+                      onConfirm: () {
+                        Get.back();
+                        Get.toNamed(Routes.REGISTER);
+                      },
+                      onCancel: () {
+                        Get.back();
+                        Get.toNamed(Routes.LOGIN);
+                      },
+                    );
+                    return;
+                  }
+                  Get.toNamed(Routes.CHECKOUT);
+                },
               ),
             ],
           ),

@@ -5,6 +5,7 @@ import '../../../data/models/order_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/order_service.dart';
 import '../../../data/utils/app_snackbar.dart';
+import '../../../routes/app_pages.dart';
 import '../../catalog/controllers/catalog_controller.dart';
 
 class CheckoutController extends GetxController {
@@ -101,6 +102,15 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> submitOrder() async {
+    if (authService.isGuest) {
+      AppSnackbar.warning(
+        'Akun Terdaftar Diperlukan',
+        'Pelanggan mode Tamu tidak dapat melakukan pemesanan. Silakan buat akun atau login terlebih dahulu.',
+      );
+      Get.toNamed(Routes.REGISTER);
+      return;
+    }
+
     if (nameController.text.trim().isEmpty) {
       AppSnackbar.error('Data Belum Lengkap', 'Mohon isi nama lengkap Anda.');
       return;
