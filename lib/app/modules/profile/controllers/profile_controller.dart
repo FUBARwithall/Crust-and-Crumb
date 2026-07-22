@@ -14,6 +14,7 @@ class ProfileController extends GetxController {
 
   final RxBool isObscureNewPassword = true.obs;
   final RxBool isObscureConfirmPassword = true.obs;
+  final RxString selectedLanguage = 'Bahasa Indonesia'.obs;
 
   @override
   void onInit() {
@@ -48,8 +49,6 @@ class ProfileController extends GetxController {
     final username = usernameController.text.trim();
     final email = emailController.text.trim();
     final phone = phoneController.text.trim();
-    final newPassword = newPasswordController.text;
-    final confirmPassword = confirmPasswordController.text;
 
     if (username.isEmpty || email.isEmpty || phone.isEmpty) {
       AppSnackbar.warning(
@@ -67,34 +66,14 @@ class ProfileController extends GetxController {
       return;
     }
 
-    if (newPassword.isNotEmpty) {
-      if (newPassword.length < 4) {
-        AppSnackbar.warning(
-          'Password Terlalu Pendek',
-          'Password baru minimal 4 karakter.',
-        );
-        return;
-      }
-
-      if (newPassword != confirmPassword) {
-        AppSnackbar.error(
-          'Konfirmasi Password Salah',
-          'Password baru dan konfirmasi password tidak cocok.',
-        );
-        return;
-      }
-    }
-
     final success = await authService.updateProfile(
       username: username,
       email: email,
       phone: phone,
-      newPassword: newPassword.isNotEmpty ? newPassword : null,
     );
 
     if (success) {
-      newPasswordController.clear();
-      confirmPasswordController.clear();
+      Get.back(); // Close edit profile modal sheet
       AppSnackbar.success(
         'Profil Diperbarui',
         'Data profil Anda berhasil disimpan!',
@@ -103,6 +82,62 @@ class ProfileController extends GetxController {
       AppSnackbar.error(
         'Gagal Memperbarui',
         'Username atau Email tersebut telah digunakan oleh pengguna lain.',
+      );
+    }
+  }
+
+  Future<void> updatePasswordOnly() async {
+    if (authService.isGuest) return;
+
+    final newPassword = newPasswordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    if (newPassword.isEmpty) {
+      AppSnackbar.warning(
+        'Password Kosong',
+        'Mohon masukkan password baru Anda.',
+      );
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      AppSnackbar.warning(
+        'Password Terlalu Pendek',
+        'Password baru minimal 4 karakter.',
+      );
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      AppSnackbar.error(
+        'Konfirmasi Password Salah',
+        'Password baru dan konfirmasi password tidak cocok.',
+      );
+      return;
+    }
+
+    final user = authService.currentUser.value;
+    if (user == null) return;
+
+    final success = await authService.updateProfile(
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      newPassword: newPassword,
+    );
+
+    if (success) {
+      newPasswordController.clear();
+      confirmPasswordController.clear();
+      Get.back(); // close modal sheet
+      AppSnackbar.success(
+        'Password Diperbarui',
+        'Password akun Anda berhasil diganti!',
+      );
+    } else {
+      AppSnackbar.error(
+        'Gagal Mengubah Password',
+        'Terjadi kesalahan saat memperbarui password.',
       );
     }
   }

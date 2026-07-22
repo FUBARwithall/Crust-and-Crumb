@@ -3,10 +3,10 @@ import 'package:get/get.dart';
 import '../modules/auth/bindings/auth_binding.dart';
 import '../modules/auth/views/login_view.dart';
 import '../modules/auth/views/register_view.dart';
-import '../modules/catalog/bindings/catalog_binding.dart';
-import '../modules/catalog/views/catalog_view.dart';
 import '../modules/checkout/bindings/checkout_binding.dart';
 import '../modules/checkout/views/checkout_view.dart';
+import '../modules/dashboard/bindings/dashboard_binding.dart';
+import '../modules/dashboard/views/dashboard_view.dart';
 import '../modules/profile/bindings/profile_binding.dart';
 import '../modules/profile/views/profile_view.dart';
 
@@ -29,9 +29,14 @@ class AppPages {
       binding: AuthBinding(),
     ),
     GetPage(
+      name: _Paths.DASHBOARD,
+      page: () => const DashboardView(),
+      binding: DashboardBinding(),
+    ),
+    GetPage(
       name: _Paths.CATALOG,
-      page: () => const CatalogView(),
-      binding: CatalogBinding(),
+      page: () => const DashboardView(),
+      binding: DashboardBinding(),
     ),
     GetPage(
       name: _Paths.CHECKOUT,

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../../data/models/bakery_item.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../routes/app_pages.dart';
+import '../../dashboard/controllers/dashboard_controller.dart';
 import '../controllers/catalog_controller.dart';
 
 class CatalogView extends GetView<CatalogController> {
@@ -27,7 +28,13 @@ class CatalogView extends GetView<CatalogController> {
           final isGuest = user?.isGuest ?? true;
 
           return InkWell(
-            onTap: () => Get.toNamed(Routes.PROFILE),
+            onTap: () {
+              if (Get.isRegistered<DashboardController>()) {
+                Get.find<DashboardController>().changeTab(3);
+              } else {
+                Get.toNamed(Routes.PROFILE);
+              }
+            },
             borderRadius: BorderRadius.circular(24),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -87,105 +94,37 @@ class CatalogView extends GetView<CatalogController> {
         }),
         actions: [
           IconButton(
-            tooltip: 'Profil Saya',
-            icon: const Icon(Icons.person_outline, color: Colors.white),
-            onPressed: () => Get.toNamed(Routes.PROFILE),
+            tooltip: 'Notifikasi & Info',
+            icon: Badge(
+              smallSize: 9,
+              backgroundColor: const Color(0xFFD2691E),
+              child: const Icon(Icons.notifications_outlined, color: Colors.white),
+            ),
+            onPressed: () => _showNotificationWindow(context),
           ),
-          IconButton(
-            tooltip: 'Keluar / Ganti Akun',
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () {
-              authService.logout();
-              Get.offAllNamed(Routes.LOGIN);
-            },
-          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
-          // Hero Banner & Search Header
+          // Search Header
           Container(
             color: const Color(0xFF4A2C11),
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: Column(
-              children: [
-                // Artisanal Hero Banner Card
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8B4513), Color(0xFF5C2C06)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.4)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.25),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.bakery_dining, color: Color(0xFFF3E5AB), size: 32),
-                      ),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Fresh Baked Daily',
-                                  style: TextStyle(
-                                    color: Color(0xFFF3E5AB),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Dipanggang setiap pagi dari bahan impor berkualitas tinggi.',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: TextField(
+              onChanged: (val) => controller.searchQuery.value = val,
+              decoration: InputDecoration(
+                hintText: 'Cari croissant, tart, kue lapis, roti...',
+                hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF8B4513)),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
                 ),
-                const SizedBox(height: 16),
-
-                // Search Box
-                TextField(
-                  onChanged: (val) => controller.searchQuery.value = val,
-                  decoration: InputDecoration(
-                    hintText: 'Cari croissant, tart, kue lapis, roti...',
-                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF8B4513)),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
 
@@ -919,5 +858,162 @@ class CatalogView extends GetView<CatalogController> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]}.',
         );
+  }
+
+  void _showNotificationWindow(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Color(0xFFFAF7F2),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.notifications_active, color: Color(0xFF8B4513)),
+                      SizedBox(width: 10),
+                      Text(
+                        'Pusat Notifikasi & Info',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF4A2C11),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const Divider(color: Color(0xFFE5E0D8)),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildNotificationTile(
+                      icon: Icons.local_offer,
+                      color: const Color(0xFFD2691E),
+                      title: 'Promo Pastry Segar Pagi Ini! 🥐',
+                      subtitle: 'Nikmati diskon 20% untuk Varian Artisan Croissant Butter dan Danish Cheese pukul 07.00 - 10.00.',
+                      time: '10 menit lalu',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildNotificationTile(
+                      icon: Icons.receipt_long,
+                      color: const Color(0xFF8B4513),
+                      title: 'Struk Pemesanan & Cetak Gambar BMP',
+                      subtitle: 'Setiap transaksi berhasil kini otomatis menerbitkan Struk Resmi di tab "Struk" dengan fitur unduh gambar BMP.',
+                      time: '1 jam lalu',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildNotificationTile(
+                      icon: Icons.delivery_dining,
+                      color: Colors.green[700]!,
+                      title: 'Pengiriman Kurir GPS Presisi 📍',
+                      subtitle: 'Pesanan pastry favorit Anda akan diantar langsung ke titik koordinat lokasi yang dipilih saat checkout.',
+                      time: 'Kemarin',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNotificationTile({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required String time,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E0D8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF333333),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      time,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.3),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

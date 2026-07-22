@@ -1,13 +1,11 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../../../data/models/order_model.dart';
 import '../../../../data/utils/app_snackbar.dart';
+import '../../../../data/utils/download_helper.dart';
 
 class ReceiptCard extends StatelessWidget {
   final OrderModel order;
@@ -72,15 +70,7 @@ class ReceiptCard extends StatelessWidget {
       final Uint8List rawRgbaBytes = byteData.buffer.asUint8List();
       final Uint8List bmpBytes = _encodeRgbaToBmp(rawRgbaBytes, image.width, image.height);
 
-      if (kIsWeb) {
-        final blob = html.Blob([bmpBytes], 'image/bmp');
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
-          ..target = '_blank'
-          ..download = 'struk_${order.id}.bmp';
-        anchor.click();
-        html.Url.revokeObjectUrl(url);
-      }
+      downloadBmpFile(bmpBytes, 'struk_${order.id}.bmp');
 
       AppSnackbar.success(
         'Struk Berhasil Di-download',
@@ -175,6 +165,8 @@ class ReceiptCard extends StatelessWidget {
                   _buildRowDetail('No. Telepon', order.customerPhone.isNotEmpty ? order.customerPhone : '-'),
                   if (order.addressNotes.isNotEmpty)
                     _buildRowDetail('Patokan Alamat', order.addressNotes),
+                  _buildRowDetail('Opsi Pengiriman', order.shippingMethod.isNotEmpty ? order.shippingMethod : 'Kurir Express'),
+                  _buildRowDetail('Metode Pembayaran', order.paymentMethod.isNotEmpty ? order.paymentMethod : 'COD'),
                   _buildRowDetail('Koordinat GPS', '${order.latitude.toStringAsFixed(4)}, ${order.longitude.toStringAsFixed(4)}'),
 
                   const SizedBox(height: 14),

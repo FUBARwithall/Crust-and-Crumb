@@ -1,18 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
+import '../helpers/database_helper.dart';
 import '../models/bakery_item.dart';
 import '../models/order_model.dart';
+import '../utils/app_config.dart';
 
 class OrderService extends GetxService {
-  final GetStorage _storage = GetStorage();
 
   // Laravel Backend Server URL
-  // Use http://127.0.0.1:8000/api for Web/Desktop or http://10.0.2.2:8000/api for Android Emulator
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String baseUrl = AppConfig.baseUrl;
 
   final RxList<OrderModel> orders = <OrderModel>[].obs;
   final RxList<BakeryItem> products = <BakeryItem>[].obs;
@@ -26,12 +25,16 @@ class OrderService extends GetxService {
     fetchProductsFromAPI();
   }
 
-  void _loadOrders() {
-    final List<dynamic>? stored = _storage.read<List<dynamic>>('orders');
-    if (stored != null) {
-      orders.assignAll(
-        stored.map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e))).toList(),
-      );
+  Future<void> _loadOrders() async {
+    // Load orders from SQLite Database (single source of truth)
+    try {
+      final sqliteOrders = await DatabaseHelper.instance.getOrders();
+      if (sqliteOrders.isNotEmpty) {
+        orders.assignAll(sqliteOrders);
+        debugPrint('[OrderService] Loaded ${sqliteOrders.length} orders from SQLite.');
+      }
+    } catch (e) {
+      debugPrint('[OrderService] SQLite load orders error: $e');
     }
   }
 
@@ -64,6 +67,8 @@ class OrderService extends GetxService {
               addressNotes: o['address_notes']?.toString() ?? '',
               latitude: (o['latitude'] as num?)?.toDouble() ?? 0.0,
               longitude: (o['longitude'] as num?)?.toDouble() ?? 0.0,
+              shippingMethod: o['shipping_method']?.toString() ?? 'Kurir Express',
+              paymentMethod: o['payment_method']?.toString() ?? 'COD',
               items: itemsList,
               totalPrice: (o['total_price'] as num?)?.toDouble() ?? 0.0,
               orderTime: o['created_at'] != null ? DateTime.parse(o['created_at']) : DateTime.now(),
@@ -73,6 +78,7 @@ class OrderService extends GetxService {
           for (final serverOrder in loaded) {
             if (!orders.any((o) => o.id == serverOrder.id)) {
               orders.insert(0, serverOrder);
+              DatabaseHelper.instance.saveOrder(serverOrder);
             }
           }
         }
@@ -85,10 +91,10 @@ class OrderService extends GetxService {
   Future<void> fetchProductsFromAPI() async {
     isLoadingProducts.value = true;
     try {
-      // Fetch strictly from Laravel Server API / Supabase Database
+      // 1. Try to fetch from Laravel REST API Server
       final laravelRes = await http
           .get(Uri.parse('$baseUrl/products'))
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 5));
 
       if (laravelRes.statusCode == 200) {
         final data = jsonDecode(laravelRes.body);
@@ -96,10 +102,11 @@ class OrderService extends GetxService {
 
         if (list != null && list.isNotEmpty) {
           final List<BakeryItem> loaded = list.map((item) {
+            final catStr = item['category']?.toString() ?? 'roti';
             return BakeryItem(
               id: item['id'].toString(),
               name: item['name'].toString(),
-              category: item['category'] == 'kue' ? BakeryCategory.kue : BakeryCategory.roti,
+              category: catStr == 'kue' ? BakeryCategory.kue : BakeryCategory.roti,
               price: (item['price'] as num).toDouble(),
               description: item['description']?.toString() ?? '',
               imageUrl: item['image_url']?.toString() ?? '',
@@ -111,23 +118,38 @@ class OrderService extends GetxService {
           }).toList();
 
           products.assignAll(loaded);
-          debugPrint('[OrderService] Successfully loaded ${loaded.length} products strictly from API.');
+          // Save to SQLite for offline access
+          await DatabaseHelper.instance.saveProducts(loaded);
+          debugPrint('[OrderService] Successfully loaded ${loaded.length} products from API & saved to SQLite.');
+          return;
         }
       }
     } catch (e) {
-      debugPrint('[OrderService] Product fetch API error: $e');
+      debugPrint('[OrderService] Product API error: $e. Falling back to SQLite database cache...');
     } finally {
       isLoadingProducts.value = false;
+    }
+
+    // 2. Offline Fallback: Load products from SQLite database
+    try {
+      final cachedProducts = await DatabaseHelper.instance.getProducts();
+      if (cachedProducts.isNotEmpty) {
+        products.assignAll(cachedProducts);
+        debugPrint('[OrderService] Offline mode: Successfully loaded ${cachedProducts.length} products from SQLite database.');
+      }
+    } catch (e) {
+      debugPrint('[OrderService] SQLite fallback load error: $e');
     }
   }
 
   Future<void> addOrder(OrderModel order) async {
-    // Save locally
+    // 1. Add to reactive list
     orders.add(order);
-    final jsonList = orders.map((o) => o.toJson()).toList();
-    await _storage.write('orders', jsonList);
 
-    // Send order to Laravel Backend Server API
+    // 2. Persist to SQLite database (single source of truth)
+    await DatabaseHelper.instance.saveOrder(order);
+
+    // 3. Send order to Laravel Backend Server API
     try {
       final payload = {
         'id': order.id,
@@ -136,6 +158,8 @@ class OrderService extends GetxService {
         'address_notes': order.addressNotes,
         'latitude': order.latitude,
         'longitude': order.longitude,
+        'shipping_method': order.shippingMethod,
+        'payment_method': order.paymentMethod,
         'total_price': order.totalPrice,
         'items': order.items.map((item) {
           return {
@@ -160,7 +184,7 @@ class OrderService extends GetxService {
         debugPrint('[OrderService] Laravel Server API status code: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('[OrderService] Note: Order saved locally. Could not connect to Laravel server at $baseUrl');
+      debugPrint('[OrderService] Note: Order saved to SQLite. Could not connect to Laravel server at $baseUrl');
     }
   }
 }

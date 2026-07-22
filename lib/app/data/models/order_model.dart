@@ -26,6 +26,8 @@ class OrderModel {
   final String addressNotes;
   final double latitude;
   final double longitude;
+  final String shippingMethod;
+  final String paymentMethod;
   final List<OrderCartItem> items;
   final double totalPrice;
   final DateTime orderTime;
@@ -37,6 +39,8 @@ class OrderModel {
     required this.addressNotes,
     required this.latitude,
     required this.longitude,
+    this.shippingMethod = 'Kurir Crust & Crumb Express',
+    this.paymentMethod = 'Bayar di Tempat (COD)',
     required this.items,
     required this.totalPrice,
     required this.orderTime,
@@ -49,6 +53,8 @@ class OrderModel {
         'addressNotes': addressNotes,
         'latitude': latitude,
         'longitude': longitude,
+        'shippingMethod': shippingMethod,
+        'paymentMethod': paymentMethod,
         'items': items.map((e) => e.toJson()).toList(),
         'totalPrice': totalPrice,
         'orderTime': orderTime.toIso8601String(),
@@ -61,6 +67,8 @@ class OrderModel {
         addressNotes: json['addressNotes'] ?? '',
         latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
         longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+        shippingMethod: json['shippingMethod'] ?? 'Kurir Crust & Crumb Express',
+        paymentMethod: json['paymentMethod'] ?? 'Bayar di Tempat (COD)',
         items: (json['items'] as List<dynamic>?)
                 ?.map((e) => OrderCartItem.fromJson(Map<String, dynamic>.from(e)))
                 .toList() ??

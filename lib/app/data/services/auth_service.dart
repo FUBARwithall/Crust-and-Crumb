@@ -4,11 +4,12 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
+import '../utils/app_config.dart';
 
 class AuthService extends GetxService {
   final GetStorage _storage = GetStorage();
 
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  static const String baseUrl = AppConfig.baseUrl;
 
   final Rxn<UserModel> currentUser = Rxn<UserModel>();
 
@@ -87,7 +88,6 @@ class AuthService extends GetxService {
           username: userData['username'].toString(),
           email: userData['email'].toString(),
           phone: userData['phone']?.toString() ?? '',
-          password: password,
         );
 
         currentUser.value = loggedInUser;
@@ -132,7 +132,6 @@ class AuthService extends GetxService {
           username: userData['username'].toString(),
           email: userData['email'].toString(),
           phone: userData['phone']?.toString() ?? '',
-          password: (newPassword != null && newPassword.isNotEmpty) ? newPassword : current.password,
         );
 
         currentUser.value = updatedUser;
@@ -148,7 +147,6 @@ class AuthService extends GetxService {
       username: username.trim(),
       email: email.trim(),
       phone: phone.trim(),
-      password: (newPassword != null && newPassword.isNotEmpty) ? newPassword : current.password,
     );
 
     currentUser.value = updatedUser;

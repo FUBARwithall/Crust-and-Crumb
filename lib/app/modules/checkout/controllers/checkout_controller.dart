@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import '../../../data/models/order_model.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/order_service.dart';
@@ -16,11 +18,16 @@ class CheckoutController extends GetxController {
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
   final addressController = TextEditingController();
+  final mapSearchController = TextEditingController();
 
   final RxDouble latitude = 0.0.obs;
   final RxDouble longitude = 0.0.obs;
   final RxBool isFetchingLocation = false.obs;
   final RxString locationStatus = 'GPS belum diambil'.obs;
+
+  final RxList<Map<String, dynamic>> mapSearchResults = <Map<String, dynamic>>[].obs;
+  final RxBool isSearchingMap = false.obs;
+  final RxString mapSearchQuery = ''.obs;
 
   final RxString selectedShipping = 'express'.obs;
   final RxString selectedPayment = 'cod'.obs;
@@ -33,6 +40,13 @@ class CheckoutController extends GetxController {
       nameController.text = user.username;
       phoneController.text = user.phone;
     }
+
+    // Live debounced search as user types (350ms)
+    debounce<String>(
+      mapSearchQuery,
+      (val) => searchMapLocation(val),
+      time: const Duration(milliseconds: 350),
+    );
   }
 
   @override
@@ -40,7 +54,59 @@ class CheckoutController extends GetxController {
     nameController.dispose();
     phoneController.dispose();
     addressController.dispose();
+    mapSearchController.dispose();
     super.onClose();
+  }
+
+  Future<void> searchMapLocation(String query) async {
+    final cleanQuery = query.trim();
+    if (cleanQuery.length < 3) {
+      mapSearchResults.clear();
+      return;
+    }
+
+    isSearchingMap.value = true;
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(cleanQuery)}&limit=5',
+      );
+      final response = await http.get(
+        uri,
+        headers: {'User-Agent': 'CrustAndCrumbBakeryApp/1.0'},
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body);
+        mapSearchResults.assignAll(
+          jsonList.map((e) => Map<String, dynamic>.from(e)).toList(),
+        );
+      }
+    } catch (e) {
+      debugPrint('[CheckoutController] Nominatim search error: $e');
+    } finally {
+      isSearchingMap.value = false;
+    }
+  }
+
+  void selectMapSearchResult(Map<String, dynamic> result) {
+    try {
+      final double lat = double.parse(result['lat'].toString());
+      final double lng = double.parse(result['lon'].toString());
+      final String displayName = result['display_name'] ?? 'Lokasi Dipilih!';
+
+      latitude.value = lat;
+      longitude.value = lng;
+      locationStatus.value = displayName;
+      mapSearchResults.clear();
+      mapSearchController.text = displayName;
+
+      AppSnackbar.success(
+        'Lokasi Ditemukan',
+        'Pin peta berhasil dipindahkan ke lokasi pilihan Anda.',
+      );
+    } catch (e) {
+      debugPrint('[CheckoutController] Select location parse error: $e');
+    }
   }
 
   Future<void> fetchGPSLocation() async {
@@ -144,6 +210,8 @@ class CheckoutController extends GetxController {
       addressNotes: addressController.text.trim(),
       latitude: latitude.value,
       longitude: longitude.value,
+      shippingMethod: _getShippingLabel(selectedShipping.value),
+      paymentMethod: _getPaymentLabel(selectedPayment.value),
       items: cartItems,
       totalPrice: catalogController.totalCartPrice,
       orderTime: DateTime.now(),
@@ -165,5 +233,29 @@ class CheckoutController extends GetxController {
         Get.back();
       },
     );
+  }
+
+  String _getShippingLabel(String code) {
+    switch (code) {
+      case 'sameday':
+        return 'Ojek Online Same Day';
+      case 'pickup':
+        return 'Ambil di Toko (Self Pick-up)';
+      case 'express':
+      default:
+        return 'Kurir Crust & Crumb Express';
+    }
+  }
+
+  String _getPaymentLabel(String code) {
+    switch (code) {
+      case 'qris':
+        return 'Transfer Bank & QRIS';
+      case 'ewallet':
+        return 'E-Wallet (GoPay/OVO/DANA)';
+      case 'cod':
+      default:
+        return 'Bayar di Tempat (COD)';
+    }
   }
 }
