@@ -11,11 +11,7 @@ class LoginView extends GetView<LoginController> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFF8F0), Color(0xFFF5EBE0)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+          color: Color(0xFFFFF8F0),
         ),
         child: Center(
           child: SingleChildScrollView(

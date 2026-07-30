@@ -37,6 +37,22 @@ class RegisterController extends GetxController {
       return;
     }
 
+    if (username.length < 3) {
+      AppSnackbar.warning(
+        'Username Terlalu Pendek',
+        'Username minimal 3 karakter.',
+      );
+      return;
+    }
+
+    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(username)) {
+      AppSnackbar.warning(
+        'Username Tidak Valid',
+        'Username hanya boleh berisi huruf, angka, dan underscore.',
+      );
+      return;
+    }
+
     if (!GetUtils.isEmail(email)) {
       AppSnackbar.warning(
         'Format Email Salah',
@@ -45,10 +61,18 @@ class RegisterController extends GetxController {
       return;
     }
 
-    if (password.length < 4) {
+    if (password.length < 6) {
       AppSnackbar.warning(
         'Password Terlalu Pendek',
-        'Password minimal 4 karakter.',
+        'Password minimal 6 karakter.',
+      );
+      return;
+    }
+
+    if (password.length > 100) {
+      AppSnackbar.warning(
+        'Password Terlalu Panjang',
+        'Password maksimal 100 karakter.',
       );
       return;
     }

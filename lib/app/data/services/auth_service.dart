@@ -49,7 +49,7 @@ class AuthService extends GetxService {
         Uri.parse('$baseUrl/register'),
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 6));
+      ).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         debugPrint('[AuthService] User registered successfully into Supabase DB: ${email.trim()}');
@@ -77,7 +77,7 @@ class AuthService extends GetxService {
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
         body: jsonEncode({'identifier': cleanIdentifier, 'password': password}),
-      ).timeout(const Duration(seconds: 6));
+      ).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

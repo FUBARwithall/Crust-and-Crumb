@@ -276,29 +276,32 @@ class ProfileView extends GetView<ProfileController> {
     String? subtitle,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      leading: Icon(icon, color: const Color(0xFF555555), size: 22),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF222222),
+    return Material(
+      color: Colors.white,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        leading: Icon(icon, color: const Color(0xFF555555), size: 22),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF222222),
+          ),
         ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              )
+            : null,
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 14,
+          color: Color(0xFFBBBBBB),
+        ),
+        onTap: onTap,
       ),
-      subtitle: subtitle != null
-          ? Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            )
-          : null,
-      trailing: const Icon(
-        Icons.arrow_forward_ios,
-        size: 14,
-        color: Color(0xFFBBBBBB),
-      ),
-      onTap: onTap,
     );
   }
 

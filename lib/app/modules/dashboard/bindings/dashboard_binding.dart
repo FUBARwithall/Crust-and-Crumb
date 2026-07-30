@@ -9,8 +9,8 @@ class DashboardBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<DashboardController>(() => DashboardController());
-    Get.lazyPut<CatalogController>(() => CatalogController());
-    Get.lazyPut<CheckoutController>(() => CheckoutController());
-    Get.lazyPut<ProfileController>(() => ProfileController());
+    Get.lazyPut<CatalogController>(() => CatalogController(), fenix: true);
+    Get.lazyPut<CheckoutController>(() => CheckoutController(), fenix: true);
+    Get.lazyPut<ProfileController>(() => ProfileController(), fenix: true);
   }
 }

@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Crust &amp; Crumb membutuhkan akses lokasi untuk mengirim pesanan ke alamat Anda.</string>
 </dict>
 </plist>

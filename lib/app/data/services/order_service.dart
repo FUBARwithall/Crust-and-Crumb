@@ -94,7 +94,7 @@ class OrderService extends GetxService {
       // 1. Try to fetch from Laravel REST API Server
       final laravelRes = await http
           .get(Uri.parse('$baseUrl/products'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 10));
 
       if (laravelRes.statusCode == 200) {
         final data = jsonDecode(laravelRes.body);
@@ -109,7 +109,7 @@ class OrderService extends GetxService {
               category: catStr == 'kue' ? BakeryCategory.kue : BakeryCategory.roti,
               price: (item['price'] as num).toDouble(),
               description: item['description']?.toString() ?? '',
-              imageUrl: item['image_url']?.toString() ?? '',
+              imageUrl: item['image_url']?.toString() ?? item['image']?.toString() ?? '',
               rating: (item['rating'] as num?)?.toDouble() ?? 4.8,
               prepTime: item['prep_time']?.toString() ?? '15 mnt',
               origin: item['origin']?.toString() ?? 'Artisanal',
@@ -118,14 +118,14 @@ class OrderService extends GetxService {
           }).toList();
 
           products.assignAll(loaded);
-          // Save to SQLite for offline access
+          // Save to SQLite for offline access (mobile/desktop)
           await DatabaseHelper.instance.saveProducts(loaded);
-          debugPrint('[OrderService] Successfully loaded ${loaded.length} products from API & saved to SQLite.');
+          debugPrint('[OrderService] Successfully loaded ${loaded.length} products from API.');
           return;
         }
       }
     } catch (e) {
-      debugPrint('[OrderService] Product API error: $e. Falling back to SQLite database cache...');
+      debugPrint('[OrderService] Product API error: $e. Falling back to cache/default products...');
     } finally {
       isLoadingProducts.value = false;
     }
@@ -135,12 +135,70 @@ class OrderService extends GetxService {
       final cachedProducts = await DatabaseHelper.instance.getProducts();
       if (cachedProducts.isNotEmpty) {
         products.assignAll(cachedProducts);
-        debugPrint('[OrderService] Offline mode: Successfully loaded ${cachedProducts.length} products from SQLite database.');
+        debugPrint('[OrderService] Offline mode: Loaded ${cachedProducts.length} products from SQLite database.');
+        return;
       }
     } catch (e) {
       debugPrint('[OrderService] SQLite fallback load error: $e');
     }
+
+    // 3. Web / First-load Fallback: Default products if API fails & SQLite is unavailable
+    if (products.isEmpty) {
+      products.assignAll(_defaultProducts);
+      debugPrint('[OrderService] Fallback: Loaded ${_defaultProducts.length} default products.');
+    }
   }
+
+  static final List<BakeryItem> _defaultProducts = [
+    BakeryItem(
+      id: '52855',
+      name: 'Banana Pancakes',
+      category: BakeryCategory.roti,
+      price: 25000,
+      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
+      imageUrl: 'https://www.themealdb.com/images/media/meals/sywswr1511383814.jpg',
+      rating: 4.8,
+      prepTime: '15 mnt',
+      origin: 'Artisanal',
+      isSpecial: true,
+    ),
+    BakeryItem(
+      id: '52891',
+      name: 'Blackberry Apple Crumble',
+      category: BakeryCategory.kue,
+      price: 32000,
+      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
+      imageUrl: 'https://www.themealdb.com/images/media/meals/xvsurr1511719182.jpg',
+      rating: 4.9,
+      prepTime: '20 mnt',
+      origin: 'Artisanal',
+      isSpecial: true,
+    ),
+    BakeryItem(
+      id: '52892',
+      name: 'Carrot Cake',
+      category: BakeryCategory.kue,
+      price: 28000,
+      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
+      imageUrl: 'https://www.themealdb.com/images/media/meals/vrxpuq1511192946.jpg',
+      rating: 4.7,
+      prepTime: '25 mnt',
+      origin: 'Artisanal',
+      isSpecial: false,
+    ),
+    BakeryItem(
+      id: '52893',
+      name: 'Chocolate Souffle',
+      category: BakeryCategory.kue,
+      price: 35000,
+      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
+      imageUrl: 'https://www.themealdb.com/images/media/meals/twxvxv1511793182.jpg',
+      rating: 4.9,
+      prepTime: '30 mnt',
+      origin: 'Artisanal',
+      isSpecial: true,
+    ),
+  ];
 
   Future<void> addOrder(OrderModel order) async {
     // 1. Add to reactive list
