@@ -33,13 +33,13 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
   Future<void> _createDB(Database db, int version) async {
-    // Table 1: Products
     await db.execute('''
       CREATE TABLE products (
         id TEXT PRIMARY KEY,
@@ -47,27 +47,36 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         price REAL NOT NULL,
         image TEXT NOT NULL,
-        description TEXT NOT NULL,
-        is_available INTEGER NOT NULL
+        description TEXT DEFAULT '',
+        rating REAL DEFAULT 0,
+        prep_time TEXT DEFAULT '',
+        is_available INTEGER DEFAULT 1
       )
     ''');
 
-    // Table 2: Orders
     await db.execute('''
       CREATE TABLE orders (
         id TEXT PRIMARY KEY,
         customer_name TEXT NOT NULL,
         customer_phone TEXT NOT NULL,
-        address_notes TEXT NOT NULL,
+        address_notes TEXT DEFAULT '',
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
-        shipping_method TEXT NOT NULL,
-        payment_method TEXT NOT NULL,
+        shipping_method TEXT DEFAULT '',
+        payment_method TEXT DEFAULT '',
         total_price REAL NOT NULL,
         items_json TEXT NOT NULL,
         order_time TEXT NOT NULL
       )
     ''');
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE products ADD COLUMN rating REAL DEFAULT 0');
+      await db.execute('ALTER TABLE products ADD COLUMN prep_time TEXT DEFAULT \'\'');
+      await db.execute('ALTER TABLE products ADD COLUMN is_available INTEGER DEFAULT 1');
+    }
   }
 
   // --- PRODUCT OPERATIONS ---
@@ -88,6 +97,8 @@ class DatabaseHelper {
             'price': item.price,
             'image': item.imageUrl,
             'description': item.description,
+            'rating': item.rating,
+            'prep_time': item.prepTime,
             'is_available': 1,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
@@ -117,6 +128,8 @@ class DatabaseHelper {
           price: (map['price'] as num).toDouble(),
           imageUrl: map['image'] as String? ?? '',
           description: map['description'] as String? ?? '',
+          rating: (map['rating'] as num?)?.toDouble() ?? 4.8,
+          prepTime: map['prep_time'] as String? ?? '15 mnt',
         );
       }).toList();
     } catch (e) {

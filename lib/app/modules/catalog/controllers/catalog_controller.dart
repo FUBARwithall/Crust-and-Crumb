@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../../data/models/bakery_item.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/order_service.dart';
@@ -7,6 +9,8 @@ import '../../../routes/app_pages.dart';
 
 class CatalogController extends GetxController {
   final OrderService orderService = Get.find<OrderService>();
+  final GetStorage _storage = GetStorage();
+  static const String _cartKey = 'persisted_cart';
 
   final RxString selectedCategory = 'all'.obs; // 'all', 'roti', 'kue'
   final RxString searchQuery = ''.obs;
@@ -18,12 +22,26 @@ class CatalogController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _loadCart();
     // Debounce search query by 250ms for smooth 60fps typing & rendering
     debounce<String>(
       searchQuery,
       (val) => debouncedSearch.value = val,
       time: const Duration(milliseconds: 250),
     );
+    // Auto-save cart when items change
+    ever(cart, (_) => _saveCart());
+  }
+
+  void _loadCart() {
+    final Map<String, dynamic>? stored = _storage.read<Map<String, dynamic>>(_cartKey);
+    if (stored != null) {
+      cart.assignAll(stored.map((k, v) => MapEntry(k, v as int)));
+    }
+  }
+
+  Future<void> _saveCart() async {
+    await _storage.write(_cartKey, Map<String, int>.from(cart));
   }
 
   List<BakeryItem> get allProducts => orderService.products;
@@ -107,5 +125,6 @@ class CatalogController extends GetxController {
 
   void clearCart() {
     cart.clear();
+    _storage.remove(_cartKey);
   }
 }
