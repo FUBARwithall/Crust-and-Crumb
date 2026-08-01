@@ -17,12 +17,28 @@ class OrderService extends GetxService {
   final RxList<BakeryItem> products = <BakeryItem>[].obs;
   final RxBool isLoadingProducts = false.obs;
 
+  final List<_PendingOrder> _pendingSync = [];
+
   @override
   void onInit() {
     super.onInit();
-    _loadOrders();
-    fetchOrdersFromAPI();
-    fetchProductsFromAPI();
+    refreshOrders();
+  }
+
+  Future<void> refreshOrders() async {
+    await _loadOrders();
+    await fetchOrdersFromAPI();
+    _retryPendingOrders();
+  }
+
+  void _retryPendingOrders() {
+    if (_pendingSync.isEmpty) return;
+    debugPrint('[OrderService] Retrying ${_pendingSync.length} pending orders...');
+    final retrying = List<_PendingOrder>.from(_pendingSync);
+    _pendingSync.clear();
+    for (final pending in retrying) {
+      _syncOrderToServer(pending.order, pending.retries);
+    }
   }
 
   Future<void> _loadOrders() async {
@@ -91,7 +107,6 @@ class OrderService extends GetxService {
   Future<void> fetchProductsFromAPI() async {
     isLoadingProducts.value = true;
     try {
-      // 1. Try to fetch from Laravel REST API Server
       final laravelRes = await http
           .get(Uri.parse('$baseUrl/products'))
           .timeout(const Duration(seconds: 10));
@@ -118,87 +133,28 @@ class OrderService extends GetxService {
           }).toList();
 
           products.assignAll(loaded);
-          // Save to SQLite for offline access (mobile/desktop)
           await DatabaseHelper.instance.saveProducts(loaded);
           debugPrint('[OrderService] Successfully loaded ${loaded.length} products from API.');
           return;
         }
       }
     } catch (e) {
-      debugPrint('[OrderService] Product API error: $e. Falling back to cache/default products...');
+      debugPrint('[OrderService] Product API error: $e. Falling back to SQLite cache...');
     } finally {
       isLoadingProducts.value = false;
     }
 
-    // 2. Offline Fallback: Load products from SQLite database
+    // Offline fallback: Load products from SQLite database
     try {
       final cachedProducts = await DatabaseHelper.instance.getProducts();
       if (cachedProducts.isNotEmpty) {
         products.assignAll(cachedProducts);
         debugPrint('[OrderService] Offline mode: Loaded ${cachedProducts.length} products from SQLite database.');
-        return;
       }
     } catch (e) {
       debugPrint('[OrderService] SQLite fallback load error: $e');
     }
-
-    // 3. Web / First-load Fallback: Default products if API fails & SQLite is unavailable
-    if (products.isEmpty) {
-      products.assignAll(_defaultProducts);
-      debugPrint('[OrderService] Fallback: Loaded ${_defaultProducts.length} default products.');
-    }
   }
-
-  static final List<BakeryItem> _defaultProducts = [
-    BakeryItem(
-      id: '52855',
-      name: 'Banana Pancakes',
-      category: BakeryCategory.roti,
-      price: 25000,
-      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
-      imageUrl: 'https://www.themealdb.com/images/media/meals/sywswr1511383814.jpg',
-      rating: 4.8,
-      prepTime: '15 mnt',
-      origin: 'Artisanal',
-      isSpecial: true,
-    ),
-    BakeryItem(
-      id: '52891',
-      name: 'Blackberry Apple Crumble',
-      category: BakeryCategory.kue,
-      price: 32000,
-      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
-      imageUrl: 'https://www.themealdb.com/images/media/meals/xvsurr1511719182.jpg',
-      rating: 4.9,
-      prepTime: '20 mnt',
-      origin: 'Artisanal',
-      isSpecial: true,
-    ),
-    BakeryItem(
-      id: '52892',
-      name: 'Carrot Cake',
-      category: BakeryCategory.kue,
-      price: 28000,
-      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
-      imageUrl: 'https://www.themealdb.com/images/media/meals/vrxpuq1511192946.jpg',
-      rating: 4.7,
-      prepTime: '25 mnt',
-      origin: 'Artisanal',
-      isSpecial: false,
-    ),
-    BakeryItem(
-      id: '52893',
-      name: 'Chocolate Souffle',
-      category: BakeryCategory.kue,
-      price: 35000,
-      description: 'Pastry fresh buatan master baker dengan bahan pilihan unggulan.',
-      imageUrl: 'https://www.themealdb.com/images/media/meals/twxvxv1511793182.jpg',
-      rating: 4.9,
-      prepTime: '30 mnt',
-      origin: 'Artisanal',
-      isSpecial: true,
-    ),
-  ];
 
   Future<void> addOrder(OrderModel order) async {
     // 1. Add to reactive list
@@ -207,7 +163,11 @@ class OrderService extends GetxService {
     // 2. Persist to SQLite database (single source of truth)
     await DatabaseHelper.instance.saveOrder(order);
 
-    // 3. Send order to Laravel Backend Server API
+    // 3. Send order to Laravel Backend Server API (with retry)
+    await _syncOrderToServer(order, 0);
+  }
+
+  Future<void> _syncOrderToServer(OrderModel order, int retryCount) async {
     try {
       final payload = {
         'id': order.id,
@@ -237,12 +197,24 @@ class OrderService extends GetxService {
       ).timeout(const Duration(seconds: 6));
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        debugPrint('[OrderService] Order ${order.id} sent successfully to Laravel Server API.');
-      } else {
-        debugPrint('[OrderService] Laravel Server API status code: ${response.statusCode}');
+        debugPrint('[OrderService] Order ${order.id} synced to server (retry $retryCount).');
+        return;
       }
     } catch (e) {
-      debugPrint('[OrderService] Note: Order saved to SQLite. Could not connect to Laravel server at $baseUrl');
+      debugPrint('[OrderService] Server sync failed for order ${order.id} (retry $retryCount): $e');
+    }
+
+    if (retryCount < 3) {
+      _pendingSync.add(_PendingOrder(order, retryCount + 1));
+      debugPrint('[OrderService] Order ${order.id} queued for retry (${retryCount + 1}/3).');
+    } else {
+      debugPrint('[OrderService] Order ${order.id} sync failed after 3 retries. Kept in SQLite.');
     }
   }
+}
+
+class _PendingOrder {
+  final OrderModel order;
+  final int retries;
+  _PendingOrder(this.order, this.retries);
 }

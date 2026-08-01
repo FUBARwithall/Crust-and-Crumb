@@ -18,8 +18,17 @@ class ReceiptsView extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Riwayat & Struk Belanja'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => orderService.refreshOrders(),
+          ),
+        ],
       ),
-      body: Obx(() {
+      body: RefreshIndicator(
+        onRefresh: () => orderService.refreshOrders(),
+        color: const Color(0xFF8B4513),
+        child: Obx(() {
         final orders = orderService.orders;
 
         if (orders.isEmpty) {
@@ -75,6 +84,7 @@ class ReceiptsView extends StatelessWidget {
           },
         );
       }),
+    ),
     );
   }
 }
