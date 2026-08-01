@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../data/services/auth_service.dart';
 import '../../../data/services/order_service.dart';
 import 'widgets/receipt_card.dart';
 
@@ -10,6 +11,7 @@ class ReceiptsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final orderService = Get.find<OrderService>();
+    final authService = Get.find<AuthService>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F6F0),
@@ -29,9 +31,21 @@ class ReceiptsView extends StatelessWidget {
         onRefresh: () => orderService.refreshOrders(),
         color: const Color(0xFF8B4513),
         child: Obx(() {
-        final orders = orderService.orders;
+          final currentUser = authService.currentUser.value;
 
-        if (orders.isEmpty) {
+          // Filter orders so users ONLY see their own purchase receipts
+          final userOrders = orderService.orders.where((order) {
+            if (currentUser == null || currentUser.isGuest) return false;
+
+            final bool nameMatch = currentUser.username.isNotEmpty &&
+                order.customerName.trim().toLowerCase() == currentUser.username.trim().toLowerCase();
+            final bool phoneMatch = currentUser.phone.isNotEmpty &&
+                order.customerPhone.trim() == currentUser.phone.trim();
+
+            return nameMatch || phoneMatch;
+          }).toList();
+
+          if (userOrders.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -77,9 +91,9 @@ class ReceiptsView extends StatelessWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.all(20),
-          itemCount: orders.length,
+          itemCount: userOrders.length,
           itemBuilder: (context, index) {
-            final order = orders[index];
+            final order = userOrders[index];
             return ReceiptCard(order: order);
           },
         );
