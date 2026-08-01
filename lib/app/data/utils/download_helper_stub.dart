@@ -1,8 +1,24 @@
+import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
-/// Stub implementation for non-web platforms.
-/// Does nothing — BMP download is only supported on web.
 void downloadBmpFile(Uint8List bmpBytes, String fileName) {
-  // No-op on non-web platforms (Android/iOS/Desktop).
-  // In future, you could use path_provider + file save dialog here.
+  try {
+    Directory saveDir = Directory.systemTemp;
+    if (Platform.isAndroid) {
+      final downloadDir = Directory('/storage/emulated/0/Download');
+      final picturesDir = Directory('/storage/emulated/0/Pictures');
+      if (downloadDir.existsSync()) {
+        saveDir = downloadDir;
+      } else if (picturesDir.existsSync()) {
+        saveDir = picturesDir;
+      }
+    }
+
+    final file = File('${saveDir.path}/$fileName');
+    file.writeAsBytesSync(bmpBytes);
+    debugPrint('[DownloadHelper] BMP saved to public path: ${file.path}');
+  } catch (e) {
+    debugPrint('[DownloadHelper] Error saving BMP: $e');
+  }
 }

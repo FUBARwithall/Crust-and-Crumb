@@ -13,68 +13,21 @@ class ReceiptCard extends StatelessWidget {
 
   ReceiptCard({super.key, required this.order});
 
-  Uint8List _encodeRgbaToBmp(Uint8List rgbaBytes, int width, int height) {
-    const int fileHeaderSize = 14;
-    const int infoHeaderSize = 40;
-    const int headerSize = fileHeaderSize + infoHeaderSize;
-    final int pixelDataSize = width * height * 4;
-    final int fileSize = headerSize + pixelDataSize;
-
-    final ByteData header = ByteData(headerSize);
-
-    // File Header ('BM')
-    header.setUint8(0, 0x42);
-    header.setUint8(1, 0x4D);
-    header.setUint32(2, fileSize, Endian.little);
-    header.setUint16(6, 0, Endian.little);
-    header.setUint16(8, 0, Endian.little);
-    header.setUint32(10, headerSize, Endian.little);
-
-    // Info Header (BITMAPINFOHEADER)
-    header.setUint32(14, infoHeaderSize, Endian.little);
-    header.setInt32(18, width, Endian.little);
-    header.setInt32(22, -height, Endian.little); // Top-down
-    header.setUint16(26, 1, Endian.little);
-    header.setUint16(28, 32, Endian.little); // 32 bpp
-    header.setUint32(30, 0, Endian.little);
-    header.setUint32(34, pixelDataSize, Endian.little);
-    header.setInt32(38, 2835, Endian.little);
-    header.setInt32(42, 2835, Endian.little);
-    header.setUint32(46, 0, Endian.little);
-    header.setUint32(50, 0, Endian.little);
-
-    // Convert RGBA to BGRA (Standard BMP pixel order)
-    final Uint8List bgraPixels = Uint8List(pixelDataSize);
-    for (int i = 0; i < rgbaBytes.length && i + 3 < pixelDataSize; i += 4) {
-      bgraPixels[i] = rgbaBytes[i + 2];     // Blue
-      bgraPixels[i + 1] = rgbaBytes[i + 1]; // Green
-      bgraPixels[i + 2] = rgbaBytes[i];     // Red
-      bgraPixels[i + 3] = rgbaBytes[i + 3]; // Alpha
-    }
-
-    final builder = BytesBuilder();
-    builder.add(header.buffer.asUint8List());
-    builder.add(bgraPixels);
-    return builder.toBytes();
-  }
-
-  Future<void> _downloadAsBmp() async {
+  Future<void> _downloadAsPng() async {
     try {
       final boundary = _globalKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) return;
 
       final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
-      final ByteData? byteData = await image.toByteData();
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
 
-      final Uint8List rawRgbaBytes = byteData.buffer.asUint8List();
-      final Uint8List bmpBytes = _encodeRgbaToBmp(rawRgbaBytes, image.width, image.height);
-
-      downloadBmpFile(bmpBytes, 'struk_${order.id}.bmp');
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      downloadBmpFile(pngBytes, 'struk_${order.id}.png');
 
       AppSnackbar.success(
-        'Struk Berhasil Di-download',
-        'File gambar struk_${order.id}.bmp tersimpan.',
+        'Struk Tersimpan di Folder Download',
+        'File struk_${order.id}.png berhasil tersimpan di folder Download / Pictures HP Anda.',
       );
     } catch (e) {
       debugPrint('[ReceiptCard] Error downloading receipt: $e');
@@ -320,7 +273,7 @@ class ReceiptCard extends StatelessWidget {
                 'Download Struk (Gambar BMP)',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
-              onPressed: _downloadAsBmp,
+              onPressed: _downloadAsPng,
             ),
           ),
         ],
